@@ -79,7 +79,11 @@ class DashboardWindow(QWidget):
 
     def init_tray_and_hotkeys(self):
         """Initializes tray and hotkeys once the window is shown and window handle is active."""
-        self.tray = SystemTrayManager(self)
+        from PySide6.QtWidgets import QSystemTrayIcon
+        if QSystemTrayIcon.isSystemTrayAvailable():
+            self.tray = SystemTrayManager(self)
+        else:
+            self.tray = None
         
         # Register global hotkeys (Windows only)
         if sys.platform == "win32":
@@ -282,9 +286,11 @@ class DashboardWindow(QWidget):
                             windll.user32.SendMessageW(int(self.winId()), 0x00A1, 2, 0)
                             return True
                         else:
-                            # Python fallback dragging for other platforms
-                            self.is_moving = True
-                            self.drag_position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+                            # Qt6 startSystemMove (works on Wayland and X11)
+                            window = self.windowHandle()
+                            if window:
+                                window.startSystemMove()
+                            return True
                         
                     self.initial_geometry = self.geometry()
                     self.initial_mouse_pos = event.globalPosition().toPoint()
@@ -305,7 +311,7 @@ class DashboardWindow(QWidget):
                     elif self.resize_edge == "BR":
                         self.resize(max(280, w + delta_x), max(200, h + delta_y))
                     return True
-                elif self.is_moving:
+                elif getattr(self, 'is_moving', False):
                     self.move(event.globalPosition().toPoint() - self.drag_position)
                     return True
                     
@@ -355,8 +361,11 @@ class DashboardWindow(QWidget):
                     event.accept()
                     return
                 else:
-                    self.is_moving = True
-                    self.drag_position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+                    window = self.windowHandle()
+                    if window:
+                        window.startSystemMove()
+                    event.accept()
+                    return
                 
             self.initial_geometry = self.geometry()
             self.initial_mouse_pos = event.globalPosition().toPoint()
@@ -386,7 +395,7 @@ class DashboardWindow(QWidget):
                 self.resize(max(280, w + delta_x), max(200, h + delta_y))
                 
             event.accept()
-        elif self.is_moving:
+        elif getattr(self, 'is_moving', False):
             self.move(event.globalPosition().toPoint() - self.drag_position)
             event.accept()
         else:

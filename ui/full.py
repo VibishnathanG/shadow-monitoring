@@ -53,9 +53,6 @@ class FullDashboard(QWidget):
         self.refresh_dot = QFrame()
         self.refresh_dot.setFixedSize(8, 8)
         self.refresh_dot.setStyleSheet("background-color: #34D399; border-radius: 4px;")
-        self.dot_opacity = QGraphicsOpacityEffect(self)
-        self.dot_opacity.setOpacity(1.0)
-        self.refresh_dot.setGraphicsEffect(self.dot_opacity)
         self.dot_state = True
         
         self.indicator_layout.addWidget(self.lbl_app_title)
@@ -164,10 +161,6 @@ class FullDashboard(QWidget):
         # Update Time/Date
         self.lbl_time.setText(data["time"])
         self.lbl_date.setText(data["date"])
-        
-        # Toggle refresh dot for heartbeat visual
-        self.dot_state = not self.dot_state
-        self.dot_opacity.setOpacity(1.0 if self.dot_state else 0.2)
         
         # Skip heavy card updates when collapsed
         if not self.cards_container.isVisible():

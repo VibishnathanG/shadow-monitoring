@@ -288,13 +288,16 @@ class MetricsWorker(QThread):
 
         # 1. CPU Metrics
         cpu_usage = psutil.cpu_percent(interval=None)
-        cpu_freq_val = 0.0
-        try:
-            freq = psutil.cpu_freq()
-            if freq:
-                cpu_freq_val = freq.current
-        except Exception:
-            pass
+        cpu_freq_val = getattr(self, 'cached_cpu_freq', 0.0)
+        if current_time - getattr(self, 'last_freq_update', 0) >= 2.0:
+            self.last_freq_update = current_time
+            try:
+                freq = psutil.cpu_freq()
+                if freq:
+                    cpu_freq_val = freq.current
+                    self.cached_cpu_freq = cpu_freq_val
+            except Exception:
+                pass
 
         cpu_temp = self._get_cpu_temp()
 
@@ -369,12 +372,15 @@ class MetricsWorker(QThread):
             self.cached_net_metrics["interface"] = self.cached_net_iface
             self.cached_net_metrics["ip"] = self.cached_ip
 
-        # 5. GPU Metrics
-        gpu_metrics = self._collect_gpu_metrics()
+        # 5. GPU Metrics (throttled to 2.0s to prevent GPUtil / nvidia-smi CPU spam)
+        if current_time - getattr(self, 'last_gpu_update', 0) >= 2.0 or not hasattr(self, 'cached_gpu_metrics'):
+            self.last_gpu_update = current_time
+            self.cached_gpu_metrics = self._collect_gpu_metrics()
+        gpu_metrics = self.cached_gpu_metrics
         gpu_error = gpu_metrics.get("error")
 
         # 6. Top 3 Processes (throttled to 3.0s update interval)
-        if current_time - self.last_proc_update >= 3.0 or not self.cached_top_processes:
+        if current_time - getattr(self, 'last_proc_update', 0) >= 3.0 or not getattr(self, 'cached_top_processes', None):
             self.last_proc_update = current_time
             self.cached_top_processes = self._collect_top_processes()
 
@@ -404,58 +410,9 @@ class MetricsWorker(QThread):
 
     def _get_cpu_temp(self):
         """Attempts to read the CPU temperature across platforms."""
-        # 1. Windows Native Query
+        # 1. Windows Native Query - Return None to avoid WMI/COM CPU usage
         if sys.platform == "win32":
-            if not hasattr(self, '_win_temp_tick'):
-                self._win_temp_tick = 0
-                self._cached_win_temp = None
-                self._temp_thread = None
-                
-            self._win_temp_tick += 1
-            
-            # Helper function to run in a separate thread
-            def fetch_temp_async():
-                try:
-                    import subprocess
-                    startupinfo = subprocess.STARTUPINFO()
-                    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-                    startupinfo.wShowWindow = 0
-                    
-                    cmd = 'powershell -NoProfile -Command "(Get-CimInstance -Namespace root/wmi -ClassName MSAcpi_ThermalZoneTemperature).CurrentTemperature"'
-                    res = subprocess.check_output(cmd, shell=True, startupinfo=startupinfo, timeout=1.5, cwd="C:\\").decode().strip()
-                    if res:
-                        lines = [l.strip() for l in res.split() if l.strip().isdigit()]
-                        if lines:
-                            celsius = (float(lines[0]) / 10.0) - 273.15
-                            if 0 < celsius < 125:
-                                self._cached_win_temp = celsius
-                                return
-                except Exception:
-                    pass
-                try:
-                    import subprocess
-                    startupinfo = subprocess.STARTUPINFO()
-                    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-                    startupinfo.wShowWindow = 0
-                    cmd = 'powershell -NoProfile -Command "(Get-CimInstance -Namespace root/cimv2 -ClassName Win32_PerfFormattedData_Counters_ThermalZoneInformation).Temperature"'
-                    res = subprocess.check_output(cmd, shell=True, startupinfo=startupinfo, timeout=1.5, cwd="C:\\").decode().strip()
-                    if res:
-                        lines = [l.strip() for l in res.split() if l.strip().isdigit()]
-                        if lines:
-                            celsius = float(lines[0]) - 273.15
-                            if 0 < celsius < 125:
-                                self._cached_win_temp = celsius
-                except Exception:
-                    pass
-
-            # Query every 10 ticks (approx 5 seconds) asynchronously
-            if self._win_temp_tick >= 10 or (self._cached_win_temp is None and self._win_temp_tick == 1):
-                self._win_temp_tick = 0
-                if self._temp_thread is None or not self._temp_thread.is_alive():
-                    self._temp_thread = threading.Thread(target=fetch_temp_async, daemon=True)
-                    self._temp_thread.start()
-            
-            return self._cached_win_temp
+            return None
 
         # 2. Linux / macOS standard query
         try:
@@ -668,44 +625,49 @@ class MetricsWorker(QThread):
             pass
 
     def _collect_top_processes(self):
-        """Collects top 3 CPU consuming processes with caching and validation."""
-        procs = []
-        # Querying all processes every 500ms is heavy.
-        # So we iterate and query.
-        # To avoid overhead: we only fetch names, cpu_percent, and rss memory.
-        # We reuse psutil.Process objects from our cache to ensure they track CPU percent over time.
+        """Collects top 3 CPU consuming processes with extreme optimization."""
+        # Update process cache
         current_pids = set()
-        
-        # Limit iteration to avoid holding the lock/thread for too long
         for proc in psutil.process_iter():
             pid = proc.pid
             current_pids.add(pid)
             if pid not in self.process_cache:
                 self.process_cache[pid] = proc
-                # Initialize cpu_percent on new process object
                 try:
                     proc.cpu_percent(interval=None)
                 except Exception:
                     pass
 
-        # Remove dead processes from cache
+        # Remove dead processes
         dead_pids = set(self.process_cache.keys()) - current_pids
         for pid in dead_pids:
             del self.process_cache[pid]
 
-        # Gather CPU percent and Memory RSS for all cached processes
-        valid_procs = []
+        # Pass 1: Collect ONLY cpu_percent (very fast, no expensive string/memory syscalls)
+        cpu_list = []
         for pid, proc in list(self.process_cache.items()):
             try:
-                # Normalize process CPU percentage by dividing by logical core count (Task Manager standard)
                 raw_cpu = proc.cpu_percent(interval=None)
-                cpu = min(100.0, raw_cpu / self.logical_cores)
+                if raw_cpu > 0:
+                    cpu_list.append((pid, proc, raw_cpu))
+            except Exception:
+                if pid in self.process_cache:
+                    del self.process_cache[pid]
+
+        # Sort by CPU usage descending
+        cpu_list.sort(key=lambda x: x[2], reverse=True)
+
+        # Pass 2: Resolve names and memory ONLY for the top consumers
+        valid_procs = []
+        for pid, proc, raw_cpu in cpu_list:
+            if len(valid_procs) >= 3:
+                break
+            try:
                 name = proc.name()
-                
-                # Skip System Idle Process
                 if name.lower() in ["system idle process", "idle", "kernel_task"]:
                     continue
                 
+                cpu = min(100.0, raw_cpu / self.logical_cores)
                 mem_bytes = proc.memory_info().rss
                 mem_mb = mem_bytes / (1024 * 1024)
                 
@@ -714,13 +676,7 @@ class MetricsWorker(QThread):
                     "cpu": cpu,
                     "ram": mem_mb
                 })
-            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-                # Clean up immediately if process terminates during inspection
-                if pid in self.process_cache:
-                    del self.process_cache[pid]
             except Exception:
                 pass
 
-        # Sort by CPU usage descending
-        valid_procs.sort(key=lambda x: x["cpu"], reverse=True)
-        return valid_procs[:3]
+        return valid_procs
