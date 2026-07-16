@@ -1,0 +1,19 @@
+{
+    "name": "Light Theme",
+    "window_bg": "background-color: transparent; border-radius: 24px; border: none;",
+    "window_bg_plain": "rgba(245, 245, 247, 0.60)",
+    "card_bg": "background-color: rgba(255, 255, 255, 0.85); border-radius: 16px; border: 1px solid rgba(0, 0, 0, 0.06);",
+    "text_primary": "#1D1D1F",
+    "text_secondary": "#515154",
+    "text_dim": "#86868B",
+    "color_normal": "#10B981",
+    "color_moderate": "#D97706",
+    "color_warn": "#EA580C",
+    "color_danger": "#DC2626",
+    "accent_cyan": "#0891B2",
+    "accent_magenta": "#C084FC",
+    "accent_purple": "#7C3AED",
+    "accent_blue": "#2563EB",
+    "menu_sel": "rgba(0, 0, 0, 0.05)",
+    "font_family": "Segoe UI, Inter, Arial, sans-serif"
+}

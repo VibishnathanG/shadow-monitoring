@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  system-monitor:
+    build: .
+    container_name: system-monitor
+    restart: unless-stopped
+    network_mode: "host"
+    pid: "host"
+    ipc: "host"
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - QT_X11_NO_MITSHM=1
+    volumes:
+      # Direct Qt rendering to host X11 Server
+      - /tmp/.X11-unix:/tmp/.X11-unix:ro
+      - ~/.Xauthority:/root/.Xauthority:ro
+      # Persist dashboard configurations in host home directory
+      - ~/.sysmon:/root/.sysmon
+    devices:
+      # AMD / Intel GPU Direct Rendering Infrastructure (DRI)
+      - /dev/dri:/dev/dri
+    
+    # Optional NVIDIA configuration (uncomment if using nvidia-container-toolkit)
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]

@@ -1,0 +1,19 @@
+{
+    "name": "One Dark",
+    "window_bg": "background-color: transparent; border-radius: 24px; border: none;",
+    "window_bg_plain": "rgba(33, 37, 43, 0.68)",
+    "card_bg": "background-color: rgba(40, 44, 52, 0.50); border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.05);",
+    "text_primary": "#ABB2BF",
+    "text_secondary": "#98C379",
+    "text_dim": "#5C6370",
+    "color_normal": "#98C379",
+    "color_moderate": "#D19A66",
+    "color_warn": "#E5C07B",
+    "color_danger": "#E06C75",
+    "accent_cyan": "#56B6C2",
+    "accent_magenta": "#C678DD",
+    "accent_purple": "#C678DD",
+    "accent_blue": "#61AFEF",
+    "menu_sel": "rgba(97, 175, 239, 0.15)",
+    "font_family": "Segoe UI, Inter, Arial, sans-serif"
+}

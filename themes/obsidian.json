@@ -1,0 +1,19 @@
+{
+    "name": "Obsidian",
+    "window_bg": "background-color: transparent; border-radius: 24px; border: none;",
+    "window_bg_plain": "rgba(18, 20, 22, 0.68)",
+    "card_bg": "background-color: rgba(28, 32, 35, 0.82); border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.04);",
+    "text_primary": "#E8EAED",
+    "text_secondary": "#8B9DA4",
+    "text_dim": "#5C6B73",
+    "color_normal": "#4ADE80",
+    "color_moderate": "#FBBF24",
+    "color_warn": "#FB923C",
+    "color_danger": "#F87171",
+    "accent_cyan": "#34D399",
+    "accent_magenta": "#A78BFA",
+    "accent_purple": "#818CF8",
+    "accent_blue": "#38BDF8",
+    "menu_sel": "rgba(74, 222, 128, 0.1)",
+    "font_family": "Segoe UI, Inter, Arial, sans-serif"
+}

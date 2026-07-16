@@ -1,0 +1,19 @@
+{
+    "name": "Dracula",
+    "window_bg": "background-color: transparent; border-radius: 24px; border: none;",
+    "window_bg_plain": "rgba(40, 42, 54, 0.68)",
+    "card_bg": "background-color: rgba(68, 71, 90, 0.80); border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.05);",
+    "text_primary": "#F8F8F2",
+    "text_secondary": "#FF79C6",
+    "text_dim": "#6272A4",
+    "color_normal": "#50FA7B",
+    "color_moderate": "#F1FA8C",
+    "color_warn": "#FFB86C",
+    "color_danger": "#FF5555",
+    "accent_cyan": "#8BE9FD",
+    "accent_magenta": "#FF79C6",
+    "accent_purple": "#BD93F9",
+    "accent_blue": "#6272A4",
+    "menu_sel": "rgba(255, 255, 255, 0.1)",
+    "font_family": "Segoe UI, Inter, Arial, sans-serif"
+}
