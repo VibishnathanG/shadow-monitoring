@@ -2,7 +2,7 @@
 
 An elegant, high-performance, frameless system monitoring widget for Windows and Linux. Built with PySide6 and `psutil`, Shadow Monitor provides a stunning dynamic UI with real-time metrics for your CPU, RAM, Disk, Network, and GPU—all while maintaining an incredibly low background footprint.
 
-![Shadow Monitor Preview](src="https://github.com/user-attachments/assets/c2935c04-723d-47cf-9312-afd467903c32")
+![Shadow Monitor Preview](https://github.com/user-attachments/assets/c2935c04-723d-47cf-9312-afd467903c32)
 
 
 ## Features
